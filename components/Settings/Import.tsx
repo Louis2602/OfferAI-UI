@@ -7,12 +7,27 @@ import { SupportedExportFormats } from '@/types/export';
 
 import { SidebarButton } from '../Sidebar/SidebarButton';
 
+import Papa from 'papaparse'
+
 interface Props {
   onImport: (data: SupportedExportFormats) => void;
 }
 
 export const Import: FC<Props> = ({ onImport }) => {
   const { t } = useTranslation('sidebar');
+
+  const handleFileUpload = (e) => {
+    if (!e.target.files?.length) return;
+    console.log(e.target.files) 
+    const file = e.target.files[0];
+    Papa.parse(file, {
+      header: true,
+      complete: (results) => {
+        console.log("🚀 ~ file: Import.tsx:26 ~ handleFileUpload ~ results:", results.data)
+        // onImport(results.data);
+      }
+    })
+  }
   return (
     <>
       <input
@@ -20,22 +35,13 @@ export const Import: FC<Props> = ({ onImport }) => {
         className="sr-only"
         tabIndex={-1}
         type="file"
-        accept=".json"
-        onChange={(e) => {
-          if (!e.target.files?.length) return;
-
-          const file = e.target.files[0];
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            let json = JSON.parse(e.target?.result as string);
-            onImport(json);
-          };
-          reader.readAsText(file);
-        }}
+        accept=".csv"
+        multiple
+        onChange={handleFileUpload}
       />
 
       <SidebarButton
-        text={t('Import data')}
+        text={t('Import csv files')}
         icon={<IconFileImport size={18} />}
         onClick={() => {
           const importFile = document.querySelector(

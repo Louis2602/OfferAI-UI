@@ -14,11 +14,6 @@ import {
   ReconnectInterval,
   createParser,
 } from 'eventsource-parser';
-import Replicate from 'replicate';
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-});
 
 export class OpenAIError extends Error {
   type: string;
@@ -45,32 +40,12 @@ export const OpenAIStream = async (
   if (OPENAI_API_TYPE === 'azure') {
     url = `${OPENAI_API_HOST}/openai/deployments/${AZURE_DEPLOYMENT_ID}/chat/completions?api-version=${OPENAI_API_VERSION}`;
   }
-  const res = await replicate.run(
-    'replicate/llama-2-70b-chat:2c1608e18606fad2812020dc541930f2d0495ce32eee50074220b87300bc16e1',
-    {
-      input: {
-        prompt:
-          'Write a poem about open source machine learning in the style of Mary Oliver.',
-      },
-    },
-  );
-  // const res = await fetch(url, {
+  // const res = await fetch('http://127.0.0.1:5000/api/generate', {
   //   headers: {
   //     'Content-Type': 'application/json',
-  //     ...(OPENAI_API_TYPE === 'openai' && {
-  //       Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`,
-  //     }),
-  //     ...(OPENAI_API_TYPE === 'azure' && {
-  //       'api-key': `${key ? key : process.env.OPENAI_API_KEY}`,
-  //     }),
-  //     ...(OPENAI_API_TYPE === 'openai' &&
-  //       OPENAI_ORGANIZATION && {
-  //         'OpenAI-Organization': OPENAI_ORGANIZATION,
-  //       }),
   //   },
   //   method: 'POST',
   //   body: JSON.stringify({
-  //     ...(OPENAI_API_TYPE === 'openai' && { model: model.id }),
   //     messages: [
   //       {
   //         role: 'system',
@@ -78,32 +53,62 @@ export const OpenAIStream = async (
   //       },
   //       ...messages,
   //     ],
-  //     max_tokens: 1000,
-  //     temperature: temperature,
+  //     temperature,
+  //     max_tokens: 1024,
   //     stream: true,
   //   }),
   // });
+  // const data = await res.json();
+  const res = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(OPENAI_API_TYPE === 'openai' && {
+        Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`,
+      }),
+      ...(OPENAI_API_TYPE === 'azure' && {
+        'api-key': `${key ? key : process.env.OPENAI_API_KEY}`,
+      }),
+      ...(OPENAI_API_TYPE === 'openai' &&
+        OPENAI_ORGANIZATION && {
+          'OpenAI-Organization': OPENAI_ORGANIZATION,
+        }),
+    },
+    method: 'POST',
+    body: JSON.stringify({
+      ...(OPENAI_API_TYPE === 'openai' && { model: model.id }),
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        ...messages,
+      ],
+      max_tokens: 1000,
+      temperature: temperature,
+      stream: true,
+    }),
+  });
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
-  // if (res.status !== 200) {
-  //   const result = await res.json();
-  //   if (result.error) {
-  //     throw new OpenAIError(
-  //       result.error.message,
-  //       result.error.type,
-  //       result.error.param,
-  //       result.error.code,
-  //     );
-  //   } else {
-  //     throw new Error(
-  //       `OpenAI API returned an error: ${
-  //         decoder.decode(result?.value) || result.statusText
-  //       }`,
-  //     );
-  //   }
-  // }
+  if (res.status !== 200) {
+    const result = await res.json();
+    if (result.error) {
+      throw new OpenAIError(
+        result.error.message,
+        result.error.type,
+        result.error.param,
+        result.error.code,
+      );
+    } else {
+      throw new Error(
+        `OpenAI API returned an error: ${
+          decoder.decode(result?.value) || result.statusText
+        }`,
+      );
+    }
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -128,10 +133,11 @@ export const OpenAIStream = async (
 
       const parser = createParser(onParse);
 
-      for await (const chunk of res as any) {
+      for await (const chunk of res.body as any) {
         parser.feed(decoder.decode(chunk));
       }
     },
   });
+  // return data.response;
   return stream;
 };

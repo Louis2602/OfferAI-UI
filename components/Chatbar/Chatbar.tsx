@@ -54,11 +54,11 @@ export const Chatbar = () => {
     [homeDispatch],
   );
 
-  const handleExportData = () => {
+  const handleExportConversations = () => {
     exportData();
   };
 
-  const handleImportConversations = (data: SupportedExportFormats) => {
+  const handleImportData = (data: SupportedExportFormats) => {
     const { history, folders, prompts }: LatestExportFormat = importData(data);
     homeDispatch({ field: 'conversations', value: history });
     homeDispatch({
@@ -172,8 +172,8 @@ export const Chatbar = () => {
         ...chatBarContextValue,
         handleDeleteConversation,
         handleClearConversations,
-        handleImportConversations,
-        handleExportData,
+        handleImportData,
+        handleExportConversations,
         handleApiKeyChange,
       }}
     >
