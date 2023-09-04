@@ -16,7 +16,7 @@ interface Props {
 export const Import: FC<Props> = ({ onImport }) => {
   const { t } = useTranslation('sidebar');
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = (e: any) => {
     if (!e.target.files?.length) return;
     console.log(e.target.files) 
     const file = e.target.files[0];
